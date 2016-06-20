@@ -3,7 +3,7 @@
 ##Notes:
 
 1. Getting rid of multiple instantiations of individual authors, the name representation is firstletter_firstname full_lastname (i.e., "N Conaway").
-2. 
+2. `data.tsv` is a boolean author-by-presentation ownership matrix. This should be useful in computing most things.... 
 
 ##Todo:
 
