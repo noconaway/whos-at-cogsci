@@ -44,7 +44,7 @@ unique_authors = set(x for l in records for x in l)
 numauthors, numpresentations = len(unique_authors), len(records)
 
 # ------ Save as TSV
-headers = [['name'] + ['p2' + str(i+1) for i in range(numpresentations)]]
+headers = [['name'] + ['p' + str(i+1) for i in range(numpresentations)]]
 rows = [ [i] + [int(i in j) for j in records] for i in unique_authors]
 data = headers + rows
 dst = os.path.join(os.path.dirname(os.getcwd()),'data.tsv')
