@@ -17,11 +17,17 @@ savelocation = "saved_html"
 for i in posterurls:
 	day = i.split("_")[1]
 	dst = os.path.join(os.getcwd(),"source_html","posters", day)
+	if os.path.exists(dst):
+		os.remove(dst)
+		
 	cmd = "curl " + i + ' >> ' + dst
 	os.system(cmd)
 
 for i in talkurls:
 	day = i.split("_")[1]
 	dst = os.path.join(os.getcwd(),"source_html","talks", day)
+	if os.path.exists(dst):
+		os.remove(dst)
+
 	cmd = "curl " + i + ' >> ' + dst
 	os.system(cmd)

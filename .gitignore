@@ -1,5 +1,15 @@
+# R
+.Rhistory
+.Rapp.history
+.RData
+*-Ex.R
+
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Misc
 .DS_Store
 *.sublime-workspace
