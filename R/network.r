@@ -5,7 +5,7 @@ rm(list=ls())
 options(width=520)
 
 # read data
-master <- read.table('../data.tsv', quote = "", sep="\t", 
+master <- read.table('../authorship.tsv', quote = "", sep="\t", 
 	row.names = 1, header=TRUE)
 nauthors = dim(master)[1]
 npresentations = dim(master)[2]

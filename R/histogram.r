@@ -5,7 +5,7 @@ rm(list=ls())
 options(width=100)
 
 # load data
-master <- read.table('../data.tsv', quote = "", sep="\t", 
+master <- read.table('../authorship.tsv', quote = "", sep="\t", 
 	row.names = 1, header=TRUE)
 numpresentations = rowSums(master)
 

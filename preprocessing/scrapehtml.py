@@ -83,7 +83,7 @@ dst = os.path.join(os.path.dirname(os.getcwd()),'authorship.tsv')
 writefile(dst,data,'\t')
 
 # ------ Save title list
-headers = [["id","title"]]
+headers = [["ID","title"]]
 ids = ['p' + str(i+1) for i in range(numpresentations)]
 rows = list(zip(ids,title_list))
 data = headers + rows
