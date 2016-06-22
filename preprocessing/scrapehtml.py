@@ -61,6 +61,12 @@ for file in allfiles:
 		# process title: convert to ascii, ignoring incompaible characters
 		title = title[0].renderContents().strip().decode('ascii','ignore')
 		title = str(title).replace('\n ','')
+
+		# deal with weird <span> elements coversing spaces in some titles
+		if '<span' in title:
+			pre_span = title.split("<span")[0]
+			post_span = title.split("</span>")[1]
+			title = pre_span + ' ' + post_span
 		title_list.append(title)
 
 #  ---------------------------------------
