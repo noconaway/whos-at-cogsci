@@ -1,9 +1,11 @@
+# Create a plot showing the number of presentations of each unique author.
+
 if(dev.cur() != 1) {dev.off()}
 rm(list=ls())
 options(width=100)
 
 # load data
-master <- read.table('data.tsv', quote = "", sep="\t", 
+master <- read.table('../data.tsv', quote = "", sep="\t", 
 	row.names = 1, header=TRUE)
 numpresentations = rowSums(master)
 
@@ -43,4 +45,4 @@ p$tooltip(formatter = "#! function() {return(this.point.z);} !#")
 p$yAxis(title = list(text = "Number of Presentations"), categories = 0:10)
 p$xAxis(title = list(text = "Author") )
 
-p$save('plots/frequency.html', cdn = TRUE)
+p$save('../plots/frequency.html', standalone = TRUE)
