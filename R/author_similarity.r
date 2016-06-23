@@ -1,5 +1,7 @@
 library(tm)
-
+library(proxy)
+library(rCharts)
+ 
 # Create a plot showing the authors clusters
 
 if(dev.cur() != 1) {dev.off()}
@@ -7,9 +9,9 @@ rm(list=ls())
 options(width=150)
 
 # read data
-authorship <- read.table('../authorship.tsv', quote = "", sep="\t", 
+authorship <- read.table('..\\authorship.tsv', quote = "", sep="\t", 
 	row.names = 1, header=TRUE)
-titles <- read.table('../titles.tsv', quote = "", sep="\t", 
+titles <- read.table('..\\titles.tsv', quote = "", sep="\t", 
 	row.names = 1, header=TRUE)
 nauthors = dim(authorship)[1]
 npresentations = dim(authorship)[2]
@@ -67,14 +69,12 @@ used_keywords = rowSums(authordata) > 0
 authordata = authordata[used_keywords,]
 
 # measure distance between authors, conduct MDS
-library(proxy)
 doc_distance <- function(x,y) { return = acos(x %*% y / sqrt((x %*% x) * (y %*% y))) }
 
 D = dist(authordata,method = doc_distance)
 coords = cmdscale(D,2)
 
 # plot the data
-require(rCharts)
 df <- data.frame(x = coords[,1], y = coords[,2], z = row.names(authordata))
 
 # create plot object
