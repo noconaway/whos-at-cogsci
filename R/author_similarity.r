@@ -1,3 +1,5 @@
+library(tm)
+
 # Create a plot showing the authors clusters
 
 if(dev.cur() != 1) {dev.off()}
@@ -18,7 +20,6 @@ getlastname <- function(s) {return(substr(s, start = 3, stop = nchar(s)))}
 lastnames = unlist(lapply(row.names(authorship), getlastname))
 
 # mine the text data
-library(tm)
 source <- VectorSource(titles$title)
 corpus <- Corpus(source)
 
