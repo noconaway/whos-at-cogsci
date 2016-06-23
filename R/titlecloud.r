@@ -12,15 +12,6 @@ titles <- read.table('../titles.tsv', quote = "", sep="\t",
 nauthors = dim(authorship)[1]
 npresentations = dim(authorship)[2]
 
-
-# get list of last names for display
-lastnames = vector(mode="character", length = nauthors)
-for (i in 1:nauthors) {
-	name = row.names(authorship)[i]
-	lastnames[i] = substr(name,start = 2, stop = nchar(name))
-}
-
-
 # mine the text data
 library(tm)
 source <- VectorSource(titles$title)
@@ -91,6 +82,7 @@ for (j in seq(corpus)) {
 	corpus[[j]] <- gsub("words", "word", corpus[[j]])
 }
 
+# finish cleaning
 corpus <- tm_map(corpus, stripWhitespace) # strip whitespace
 corpus <- tm_map(corpus, PlainTextDocument) # convert to plain text
 
@@ -106,7 +98,7 @@ library(wordcloud)
 library(wesanderson)
 
 png('../plots/wordcloud.png', width = 1000, height = 500)
-wordcloud(names(frequency), frequency, min.freq=9, scale = c(8,.5),
+wordcloud(names(frequency), frequency, min.freq=9, scale = c(7,.5),
 	colors = wes_palette("Darjeeling"),
 	fixed.asp = FALSE, rot.per = 0)   
 dev.off()
