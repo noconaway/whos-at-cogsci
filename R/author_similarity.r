@@ -46,7 +46,7 @@ row.names(dtm) = colnames(authorship)
 # get frequency of useage of each word,
 # use only words with some frequency. 
 frequency <- colSums(dtm)
-features = dtm[,frequency >= 10]
+features = dtm[,frequency >= 15]
 nfeatures = dim(features)[2]
 
 # create author-by feature data frame

@@ -7,7 +7,6 @@
 
 ##Todo:
 
-1. Make downloadhtml.py slicker, generate list of file rather than constructing on the fly. Maybe zip or something would work?
-2. Social network analysis -- what are the clusters of connected authors?
-3. Presentation frequency plot: make x axis more clearly alphabetical --  indicate start of last name letter with x tick
-4. Use sqlite instead of tsv for data storage
+1. **Create a coauthorship network -- what are the clusters of connected authors?** I put a little time into this, but the edges are really sparse and i'm no network whiz.
+2. **Additions to the author similarity plot.** Cluster the author similarity figure and illustrate each cluster's most common terms.
+3. **Fixing the presentation frequency plot.** Make x axis more clearly alphabetical --  indicate start of last name letter with x tick
