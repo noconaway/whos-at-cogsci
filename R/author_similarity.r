@@ -69,17 +69,17 @@ authordata = authordata[used_keywords,]
 
 # get 2D coordinates for each author
 # USING PCA
-coords = prcomp(authordata)$x[,1:2]
+# coords = prcomp(authordata)$x[,1:2]
 
 # USING MDS
 D = dist(authordata, method = "Jaccard")
 coords = cmdscale(D,2)
 
 # plot the data
-df <- data.frame(x = coords[,1], y = coords[,2], z = row.names(authordata), cluster = idx)
+df <- data.frame(x = coords[,1], y = coords[,2], z = row.names(authordata))
 
 # create plot object
-p <- hPlot(y ~ x, data = df, type = "scatter", group = "cluster")
+p <- hPlot(y ~ x, data = df, type = "scatter")
 
 # set turbothreshold
 p$plotOptions(series=list(turboThreshold = 2000))
@@ -100,6 +100,8 @@ p$params$width = 500
 p$params$height = 500
 p$chart(plotBorderWidth=3)
 print(p)
-p$save('../plots/similarity.html', standalone = TRUE)
+
+dst = file.path(dirname(getwd()),"plots", "similarity.html")
+p$save(dst, standalone = TRUE)
 
 

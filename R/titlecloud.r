@@ -5,10 +5,10 @@ rm(list=ls())
 options(width=150)
 
 # read data
-authorship <- read.table('../authorship.tsv', quote = "", sep="\t", 
-	row.names = 1, header=TRUE)
-titles <- read.table('../titles.tsv', quote = "", sep="\t", 
-	row.names = 1, header=TRUE)
+authorship <- read.table(file.path(dirname(getwd()), "authorship.tsv")
+	, quote = "", sep="\t", row.names = 1, header=TRUE)
+titles <- read.table(file.path(dirname(getwd()), "titles.tsv"), 
+	quote = "", sep="\t", row.names = 1, header=TRUE)
 nauthors = dim(authorship)[1]
 npresentations = dim(authorship)[2]
 
@@ -97,7 +97,8 @@ frequency <- sort(frequency, decreasing=TRUE)
 library(wordcloud)
 library(wesanderson)
 
-png('../plots/wordcloud.png', width = 1000, height = 500)
+dst = file.path(dirname(getwd()),"plots", "wordcloud.png")
+png(dst, width = 1000, height = 500)
 wordcloud(names(frequency), frequency, min.freq=9, scale = c(7,.5),
 	colors = wes_palette("Darjeeling"),
 	fixed.asp = FALSE, rot.per = 0)   
