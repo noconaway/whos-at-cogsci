@@ -5,21 +5,21 @@ rm(list=ls())
 options(width=100)
 
 # load data
-master <- read.table('../authorship.tsv', quote = "", sep="\t", 
-	row.names = 1, header=TRUE)
-numpresentations = rowSums(master)
+authorship <- read.table(file.path(dirname(getwd()), "authorship.tsv")
+	, quote = "", sep="\t", row.names = 1, header=TRUE)
+numpresentations = rowSums(authorship)
 
 # get list of last names for sorting
 lastnames = vector(mode="character", length = length(numpresentations))
 for (i in 1:length(numpresentations)) {
-	name = row.names(master)[i]
+	name = row.names(authorship)[i]
 	lastnames[i] = substr(name,start = 2, stop = nchar(name))
 }
 sortorder = sort(lastnames, index.return = TRUE)$ix
 
 
 # sosrt data fields
-fullnames = row.names(master)[sortorder]
+fullnames = row.names(authorship)[sortorder]
 numpresentations = numpresentations[sortorder]
 index = 1:length(numpresentations)
 
@@ -45,4 +45,5 @@ p$tooltip(formatter = "#! function() {return(this.point.z);} !#")
 p$yAxis(title = list(text = "Number of Presentations"), categories = 0:10)
 p$xAxis(title = list(text = "Author") )
 
-p$save('../plots/frequency.html', standalone = TRUE)
+dst = file.path(dirname(getwd()),"plots", "frequency.html")
+p$save(dst, standalone = TRUE)

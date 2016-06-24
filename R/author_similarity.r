@@ -9,10 +9,10 @@ rm(list=ls())
 options(width=150)
 
 # read data
-authorship <- read.table('..\\authorship.tsv', quote = "", sep="\t", 
-	row.names = 1, header=TRUE)
-titles <- read.table('..\\titles.tsv', quote = "", sep="\t", 
-	row.names = 1, header=TRUE)
+authorship <- read.table(file.path(dirname(getwd()), "authorship.tsv")
+	, quote = "", sep="\t", row.names = 1, header=TRUE)
+titles <- read.table(file.path(dirname(getwd()), "titles.tsv"), 
+	quote = "", sep="\t", row.names = 1, header=TRUE)
 nauthors = dim(authorship)[1]
 npresentations = dim(authorship)[2]
 
@@ -45,11 +45,10 @@ corpus <- tm_map(corpus, PlainTextDocument) # convert to plain text
 dtm <- as.matrix(DocumentTermMatrix(corpus))
 row.names(dtm) = colnames(authorship)
 
-
 # get frequency of useage of each word,
 # use only words with some frequency. 
 frequency <- colSums(dtm)
-features = dtm[,frequency >= 15]
+features = dtm[,frequency >= 10]
 nfeatures = dim(features)[2]
 
 # create author-by feature data frame
@@ -68,10 +67,12 @@ for (i in 1:nauthors) {
 used_keywords = rowSums(authordata) > 0
 authordata = authordata[used_keywords,]
 
-# measure distance between authors, conduct MDS
-doc_distance <- function(x,y) { return = acos(x %*% y / sqrt((x %*% x) * (y %*% y))) }
+# get 2D coordinates for each author
+# USING PCA
+# coords = prcomp(authordata)$x[,1:2]
 
-D = dist(authordata,method = doc_distance)
+# USING MDS
+D = dist(authordata, method = "Jaccard")
 coords = cmdscale(D,2)
 
 # plot the data
@@ -99,6 +100,8 @@ p$params$width = 500
 p$params$height = 500
 p$chart(plotBorderWidth=3)
 print(p)
-p$save('../plots/similarity.html', standalone = TRUE)
+
+dst = file.path(dirname(getwd()),"plots", "similarity.html")
+p$save(dst, standalone = TRUE)
 
 
