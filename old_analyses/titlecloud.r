@@ -97,7 +97,7 @@ frequency <- sort(frequency, decreasing=TRUE)
 library(wordcloud)
 library(wesanderson)
 
-dst = file.path(dirname(getwd()),"plots", "wordcloud.png")
+dst = file.path(dirname(getwd()),"www", "wordcloud.png")
 png(dst, width = 1000, height = 500)
 wordcloud(names(frequency), frequency, min.freq=9, scale = c(7,.5),
 	colors = wes_palette("Darjeeling"),
