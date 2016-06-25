@@ -1,4 +1,8 @@
 {
+
+ // good to launch via terminal
+ // rscript -e "library(shiny);runApp(getwd())"
+
 	"folders":
 	[
 		{
