@@ -8,6 +8,7 @@
 4. **Fixing the presentation frequency plot.**. Ideally, the user should be able to click on specific points to identify the name. I have made some progress with this (using `nearPoints()` but for some unknown reason the plot marker vanishes a split-second after it appears. Failing to make that work, the possible matches field can be updated to show the nearest points to the mouse click, and users can select one as the focal author. 
 5. **Recommender**! Suggest N nearest talks to a given author.
 6. **Better CSS / Layout.**
+7. **Will sqlite speed things up?** Design database with tables for author id-name ownership, paper id-title ownership, paper-author connections, author-author connections.
 
 ##Annoying little things:
 
