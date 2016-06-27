@@ -1,10 +1,10 @@
 library(shiny)
-
+library(RSQLite)
 source("functions.r")
 
+con = dbConnect(drv="SQLite", dbname=file.path("data", "cogsci.db"))
+
 # load authorship data
-authorship <- read.table(file.path("data", "authorship.tsv"),
-	quote = "", sep="\t", row.names = 1, header=TRUE)
 
 lastnames = unlist(lapply(row.names(authorship), getlastname))
 sortorder = sort(lastnames, index.return = TRUE)$ix
