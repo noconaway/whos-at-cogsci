@@ -1,9 +1,6 @@
 
-
-getlastname <- function(s) {return(substr(s, start = 3, stop = nchar(s)))}
-
-# function to return name matches
-matchnames <- function(S,L) {	
-	return (L[ grep(S, L, ignore.case = TRUE) ])
-	
-}
+get_name_matches =  reactive ({ 
+	cmd = paste("SELECT fullname FROM author_names WHERE fullname LIKE '%", input$name, "%';", sep = '')
+    result = dbGetQuery( con, cmd )
+    return(result$fullname)
+} )
