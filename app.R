@@ -1,17 +1,21 @@
 library(shiny)
 library(DBI)
-source("functions.r")
+# source("functions.r")
 
 # make console a little prettier
 cat(rep("\n",2))
 print(format(Sys.time(), "%r"))
 
+# store relative path to db
+dbfilepath = file.path("data", "cogsci.db")
+
 # limit the number of author possibilities
 max_authors_listed = 15
 
 # connect to the database, print out the table names.
-con = dbConnect(RSQLite::SQLite(), dbname=file.path("data", "cogsci.db"))
+con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
 print(dbListTables(con))
+dbDisconnect(con)
 
 
 # ------------------------------------------
@@ -23,14 +27,12 @@ ui = fluidPage(
     	img(src = 'wordcloud.png',width = "100%"),
     	textInput("name", 
     		label = "Enter all or part of an author's name. First names are not included, except for the first inital (i.e. D Gentner).", 
-    		value = "tenen"),
+    		value = "gent"),
 		
 		uiOutput("name_matches"),
 		dataTableOutput("select_titles"),
 		plotOutput("freq_plot", click="freq_click", width = "100%"),
 		verbatimTextOutput("freq_info")
-
-
 
     )
 )
@@ -45,26 +47,60 @@ server = function(input, output) {
 	# function to query the DB for name matches
 	get_name_matches =  reactive ({ 
 
+		# connect to db
+		con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
+
 		# construct command and query the db
 		cmd = paste("SELECT fullname FROM author_names WHERE fullname LIKE '%", input$name, "%';", sep = '')
 	    result = dbGetQuery( con, cmd )
+	    dbDisconnect(con)
 
 	    # return null if there are no matches
 	    if (length(result$fullname) == 0) {return(NULL)}
 
 	    # otherwise, return the names
 	    return(result$fullname)
-	} )
+	})
 
 	# -------------------------------------------------
 	# quick function to check if a name has been selected
-	check_name_selected = reactive(
-		{!is.null(get_name_matches()) & length(get_name_matches()) <= max_authors_listed})
+	check_name_selected = reactive({
+		tf = is.null(get_name_matches()) == FALSE & length(get_name_matches()) <= max_authors_listed
+		return(tf)
+	})
+
+
+	# -------------------------------------------------
+	# function to return relevant presentation titles
+	author_presentation_titles = reactive({
+
+		# connect to db
+		con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
+		
+		# get author id (aid)
+		cmd = paste("SELECT aid FROM author_names WHERE fullname = '", input$author_choice, "'", sep = '')
+		aid = dbGetQuery(con, cmd)$aid
+
+		# get paper ids (pids)
+		cmd = paste("SELECT pid FROM authorship WHERE aid = ", aid, sep='')
+		pid = dbGetQuery(con, cmd)$pid
+
+		# get paper titles
+		cmd = paste("SELECT title FROM presentation_titles WHERE pid IN (", 
+					paste(pid, collapse = ','), ")")
+		titles = dbGetQuery(con, cmd)$title
+		dbDisconnect(con)
+
+		return(titles)
+
+	})
 
 
 	# -------------------------------------------------
 	# function to construct an author-by-presentation count data frame
 	presentation_counts = reactive({
+			# connect to db
+			con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
 
 			# get counts  and names of authors from the db
 	    	cmd = "SELECT aid, count(pid) FROM authorship GROUP BY aid"
@@ -73,6 +109,7 @@ server = function(input, output) {
 
 			cmd = "SELECT * FROM author_names"
 			names = data.frame(dbGetQuery(con, cmd))
+			dbDisconnect(con)
 
 			# merge data frames and sort
 			counts = merge(names, counts, by="aid")
@@ -82,6 +119,13 @@ server = function(input, output) {
 			counts$index = 1:dim(counts)[1]
 			return(counts)
 		})
+
+		source('functions.r')
+
+
+
+
+
 
 
   	# -------------------------------------------------
@@ -109,31 +153,14 @@ server = function(input, output) {
     # Show presentations by author
     output$select_titles <- renderDataTable({
 
-    	# get the matches
-    	M = get_name_matches()
-
-    	# get paper titles associated with the author
-    	# only do so if there is an author selected
     	if ( check_name_selected() ) {
 
-			# get author id (aid)
-			cmd = paste("SELECT aid FROM author_names WHERE fullname = '", input$author_choice, "'", sep = '')
-			aid = dbGetQuery(con, cmd)$aid
-
-			# get paper ids (pids)
-			cmd = paste("SELECT pid FROM authorship WHERE aid = ", aid, sep='')
-			pid = dbGetQuery(con, cmd)$pid
-
-			# get paper titles
-			cmd = paste("SELECT title FROM presentation_titles WHERE pid IN (", 
-						paste(pid, collapse = ','), ")")
-			titles = dbGetQuery(con, cmd)$title
+    		# get the titles
+			titles = author_presentation_titles()
 
 			# convert to df
 			df = data.frame(Title = titles)
 		}
-    
-	
     }, options = list(dom = 't'))
 
 
@@ -188,5 +215,5 @@ server = function(input, output) {
 
 }
 
-shinyApp(ui, server)
 
+shinyApp(ui, server)
