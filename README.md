@@ -16,3 +16,5 @@
 2. How to set axis *limits* using the `axis()` command?
 3. I spotted a `</span>` in one of the names: `C </span>Behme`, `aid=1311`. Better check that out.
 4. Find some way to systematically confirm that no presentations were missed in preprocessing.
+5. Weird SQLite error (i believe) generated when making the author title table: `Error: error in statement: near " ": syntax error.`
+6. Prevent error when # presentations figure looks for coordinates and has none.
