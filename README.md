@@ -15,3 +15,4 @@
 1. How to set plot margins in shiny?
 2. How to set axis *limits* using the `axis()` command?
 3. I spotted a `</span>` in one of the names: `C </span>Behme`, `aid=1311`. Better check that out.
+4. Find some way to systematically confirm that no presentations were missed in preprocessing.
