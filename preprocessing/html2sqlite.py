@@ -43,6 +43,7 @@ for file in allfiles:
 		# make sure there is only one author/title cell
 		if len(authors) > 1 or len(title) > 1:
 			print("More than one author or title. Skipping... \nFILE\t" + file)
+			continue
 
 		# skip if there is no title or author
 		if not authors:
