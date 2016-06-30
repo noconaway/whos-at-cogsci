@@ -14,18 +14,18 @@ dbfilepath = file.path("data", "cogsci.db")
 # limit the number of author possibilities
 max_authors_listed = 15
 
-# store page parameters
-params = reactiveValues(max_authors_listed = 15)
-
-# connect to the database, print out the table names.
+# connect to the database, pre-store author names
 con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
-print(dbListTables(con))
+	cmd = paste("SELECT * FROM author_names")
+	all_authors = dbGetQuery( con, cmd )
 
-# construct df containing whether each author is focal
-cmd = paste("SELECT * FROM author_names")
-all_authors = dbGetQuery( con, cmd )
-all_authors$focal = FALSE
+	# Store an object name for each author. 
+	# If any of these object names are active, then they will become focal
+	all_authors$object_name = gsub(' ','_',all_authors$fullname)
 
+	# Store a vector indicating whether the author is focal
+	# These values are updated when the author object is active
+	all_authors$focal = FALSE
 dbDisconnect(con)
 
 
@@ -42,22 +42,25 @@ ui = fluidPage(
 		# flexibly display author match output
 		uiOutput("name_matches"),
 
-		dataTableOutput("select_titles"),
-		plotOutput("freq_plot", click="freq_click", width = "100%"),
-		uiOutput("freq_info")
-
+		dataTableOutput("focal_titles"),
+		plotOutput("freq_plot", width = "100%")
     )
 )
-
 
 # ------------------------------------------
 # SET UP SERVER
 server = function(input, output, session) {
-	v <- reactiveValues(data = NULL)
+	values <- reactiveValues(all_authors = NULL)
 
-	get_focal_author = reactive({
-		return(all_authors[all_authors$focal == TRUE,])
-	})
+	# return author buttons currently available
+	get_current_authors = reactive({
+		return(names(input)[which(names(input) %in% all_authors$object_name)])
+		})
+
+	# return the currently focal author
+	get_focal_author = function() {
+		return(values$all_authors[values$all_authors$focal==TRUE,])
+	}
 
 	# -------------------------------------------------
 	# function to query the DB for name matches
@@ -78,48 +81,45 @@ server = function(input, output, session) {
 	    return(result$fullname)
 	})
 
+
 	# -------------------------------------------------
 	# function to return relevant presentation titles
 	author_presentation_titles = reactive({
 
-		# connect to db
-		con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
+			# connect to db
+			con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
+
+			# get author id (aid)
+			aid = get_focal_author()$aid
+
+			# get paper ids (pids)
+			cmd = paste("SELECT pid FROM authorship WHERE aid = ", aid,';', sep='')
+			pid = dbGetQuery(con, cmd)$pid
 		
-		# get author id (aid)
-		cmd = paste("SELECT aid FROM author_names WHERE fullname = '", input$author_choice, "'", sep = '')
-		aid = dbGetQuery(con, cmd)$aid
-
-		# get paper ids (pids)
-		cmd = paste("SELECT pid FROM authorship WHERE aid = ", aid, sep='')
-		pid = dbGetQuery(con, cmd)$pid
-
-		# get paper titles
-		cmd = paste("SELECT title FROM presentation_titles WHERE pid IN (", 
-					paste(pid, collapse = ','), ")")
-		titles = dbGetQuery(con, cmd)$title
-		dbDisconnect(con)
-
-		return(titles)
-
+			# get paper titles
+			cmd = paste("SELECT title FROM presentation_titles WHERE pid IN (", 
+						paste(pid, collapse = ','), ")")
+			titles = dbGetQuery(con, cmd)$title
+			dbDisconnect(con)
+			return(titles)
 	})
+
 
 	# -------------------------------------------------
 	# function to construct an author-by-presentation count data frame
 	presentation_counts = reactive({
 			# connect to db
 			con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
-
-			# get counts  and names of authors from the db
+			
+			# get counts from the db
 	    	cmd = "SELECT aid, count(pid) FROM authorship GROUP BY aid"
 			counts = data.frame(dbGetQuery(con, cmd))
 			colnames(counts) = c('aid','count')
 
-			cmd = "SELECT * FROM author_names"
-			names = data.frame(dbGetQuery(con, cmd))
 			dbDisconnect(con)
 
 			# merge data frames and sort
-			counts = merge(names, counts, by="aid")
+			counts = merge(all_authors, counts, by="aid")
 			counts = counts[ with(counts,order(lastname, fullname)) , ]
 			
 			# create index based on last name
@@ -136,100 +136,92 @@ server = function(input, output, session) {
 	# -------------------------------------------------
   	# print name matches
 	output$name_matches = renderUI({
+
+			# get matches
 			M = get_name_matches()
 
+			# Return message if there are no matches
 			if (is.null(M)) { HTML("No matches.") } 
+
+			# if there are matches AND there aren't too many, return the matches
 			else if (!is.null(M) & length(M) <= max_authors_listed) { 
 				lapply(1:length(M), function(num) {
-					linkname = gsub(' ','_',M[num])
-					actionButton(linkname, M[num])
-				})				
+					entry = all_authors[all_authors$fullname==M[num],]
+					actionButton(entry$object_name, entry$fullname)
+				})
+
+			# ask for more characters if there are too many matches
 			} else { HTML("Enter more characters!") }
+			
+		})
+    
+    # listen for button clicks
+	observe({
+		# apply function to all buttons
+		lapply(get_current_authors(), function(B) {
+
+			# if button was clicked, make that the focal author
+	    	observeEvent(input[[B]], {
+	    		values$all_authors <- all_authors
+	    		idx = all_authors$object_name == B
+				values$all_authors$focal[idx] = TRUE
+	    	})
+	  	})
 		})
 
-	# listen for button clicks
-	
 
+    # -------------------------------------------------
+    # Show presentations by author
+    output$focal_titles <- renderDataTable({
+    	if (any(values$all_authors$focal)) { 
 
-  	
+			# get the titles
+			titles = author_presentation_titles()
 
+			# convert to df
+			df = data.frame(Title = titles)
+			colnames(df) = paste(get_focal_author()$fullname,'Presentations')
+			return(df)
+
+		} else {
+			HTML("No author has been selected.")
+		}
+    }, options = list(dom = 't')
+    )
     
- #    # -------------------------------------------------
- #    # Show presentations by author
- #    output$select_titles <- renderDataTable({
-
- #    	if ( check_name_selected() ) {
-
- #    		# get the titles
-	# 		titles = author_presentation_titles()
-
-	# 		# convert to df
-	# 		df = data.frame(Title = titles)
-	# 	}
- #    }, options = list(dom = 't'))
 
 
-	# # ------------------------------------------------- 
- #    # presentation frequency chart
- #    output$freq_plot <- renderPlot({
+	# ------------------------------------------------- 
+    # presentation frequency chart
+    output$freq_plot <- renderPlot({
 		
-	# 	# get data from reactive
- #    	counts = presentation_counts()
+		# get data from reactive
+    	counts = presentation_counts()
 
-	# 	# plot data
-	#     par(family = "mono", new=TRUE) 
-	# 	ph = plot(counts$index, counts$count,
-	# 		axes = F, xlab = NA, ylab = NA)
+		# plot data
+	    par(family = "mono", new=TRUE) 
+		ph = plot(counts$index, counts$count,
+			axes = F, xlab = NA, ylab = NA)
 
-	# 	box()
-	# 	axis(side = 1, at=NULL, labels=FALSE, lwd.ticks = 0)
-	# 	axis(side = 2, at=1:12, las = 1, col.ticks = 0,
-	# 		mgp=c(0,0,0.4),tick = FALSE)
-	# 	mtext(side = 1, "Author (Alphabetical)", line = 0.5)
-	# 	mtext(side = 2, "Number of Presentations", line = 1.5)
+		box()
+		axis(side = 1, at=NULL, labels=FALSE, lwd.ticks = 0)
+		axis(side = 2, at=1:12, las = 1, col.ticks = 0,
+			mgp=c(0,0,0.4),tick = FALSE)
+		mtext(side = 1, "Author (Alphabetical)", line = 0.5)
+		mtext(side = 2, "Number of Presentations", line = 1.5)
 
-	# 	# label queried name
-	# 	if ( check_name_selected() ){
-	# 		selected_name = input$author_choice
-	# 		rownum = which(counts$fullname == selected_name)
-	# 		X_txt = counts$index[rownum]
-	#     	Y_txt = counts$count[rownum]
-	#     	points(X_txt, Y_txt, pch=21, col='red', bg='red',cex = 1.8)
-	#     	text(X_txt, Y_txt+0.5, selected_name, col='red')
-	# 	}
+		# label queried name
+		if ( any(values$all_authors$focal) ){
+			focal = get_focal_author()
+			rownum = which(counts$fullname == focal$fullname)
+			X_txt = counts$index[rownum]
+	    	Y_txt = counts$count[rownum]
+	    	points(X_txt, Y_txt, pch=21, col='red', bg='red',cex = 1.8)
+	    	text(X_txt, Y_txt+0.5, focal$fullname, col='red')
+		}
 
- #    } )  
-
- #    # Information about clicked authors
- #    output$freq_info <- renderUI({
- #    	# get data from reactive
- #    	counts = presentation_counts()
-
- #    	# get nearPoints()
-	#     point = nearPoints(counts, input$freq_click, xvar = "index", yvar="count", 
-	#     	threshold = 10, maxpoints = 1)
-
-	#     # display information if available
-	#     pointexists = dim(point)[1] > 0
-	#     if (pointexists) {
-	#     	actionLink("freqClickLink", point$fullname[1])
- #    	} 
- #    })
-
- #   	# handle user clicking on names
- #    observeEvent(input$freqClickLink, {
-
- #    	# determine who was clicked on
- #    	counts = presentation_counts()
-	#     point = nearPoints(counts, input$freq_click, xvar = "index", yvar="count", 
-	#     	threshold = 10, maxpoints = 1)
-
-	#     # update name box
-	#     get_focal_author()
-	#     # updateTextInput(session, "name", value = point$fullname[1])	
-
- # 	})
-    
+    } )  
+   
 
 }
 

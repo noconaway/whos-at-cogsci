@@ -10,6 +10,7 @@
 6. **Better CSS / Layout.**
 7. **Show and hide author info**. The page should not shift focus based on the author selection.
 
+
 ##Annoying little things:
 
 1. How to set plot margins in shiny?
@@ -18,3 +19,4 @@
 4. Find some way to systematically confirm that no presentations were missed in preprocessing.
 5. Weird SQLite error (i believe) generated when making the author title table: `Error: error in statement: near " ": syntax error.`
 6. Prevent error when # presentations figure looks for coordinates and has none.
+7. Need some salient message about who the focal author is
