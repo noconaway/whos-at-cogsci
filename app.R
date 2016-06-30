@@ -1,7 +1,5 @@
 library(shiny)
 library(DBI)
-source('helpers.r')
-
 
 
 # make console a little prettier
@@ -32,7 +30,7 @@ dbDisconnect(con)
 # ------------------------------------------
 # SET UP USER INTERFACE
 ui = fluidPage(
-	titlePanel("Who's at CogSci?"),
+	titlePanel("Who's at CogSci? 2016"),
   
     mainPanel(
     	textInput("name", 
@@ -41,9 +39,10 @@ ui = fluidPage(
 		
 		# flexibly display author match output
 		uiOutput("name_matches"),
-
-		dataTableOutput("focal_titles"),
-		plotOutput("freq_plot", width = "100%")
+		plotOutput("freq_plot", width = "100%"),
+		uiOutput("coauthor_buttons"),
+		dataTableOutput("focal_titles")
+		
     )
 )
 
@@ -127,7 +126,23 @@ server = function(input, output, session) {
 			return(counts)
 		})
 
-
+		# -------------------------------------------------
+		# function to return coauthor informartion based on a focal author
+		get_coauthors = reactive({
+				# connect to db
+				con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
+				
+				# get counts from the db
+				aid = get_focal_author()$aid
+		    	cmd = paste("SELECT aid_2 FROM coauthors WHERE aid_1 = ", aid,';', sep='')
+				co_aids = dbGetQuery(con, cmd)
+				colnames(co_aids) = "aid"
+				dbDisconnect(con)
+				
+				# merge data frames
+				co_aids = merge(all_authors, co_aids, by="aid")
+				return(co_aids)
+			})
 
 
 
@@ -189,8 +204,6 @@ server = function(input, output, session) {
     }, options = list(dom = 't')
     )
     
-
-
 	# ------------------------------------------------- 
     # presentation frequency chart
     output$freq_plot <- renderPlot({
@@ -200,8 +213,35 @@ server = function(input, output, session) {
 
 		# plot data
 	    par(family = "mono", new=TRUE) 
-		ph = plot(counts$index, counts$count,
+		ph = plot(counts$index, counts$count, type='n',
 			axes = F, xlab = NA, ylab = NA)
+
+
+		# label queried name
+		if ( any(values$all_authors$focal) ){
+
+			# label focal author
+			focal = get_focal_author()
+			rownum = which(counts$fullname == focal$fullname)
+	    	points(counts$index[rownum], counts$count[rownum], 
+	    		pch=21, col='red', bg='red',cex = 1.8)
+	    	text(counts$index[rownum], counts$count[rownum]+0.5, 
+	    		focal$fullname, col='red')
+
+	    	# label coauthors
+	    	coauthors = get_coauthors()	
+	    	if (dim(coauthors)[1] > 0) {
+		    	lapply(1:dim(coauthors)[1], function(co) {
+		    		rownum = which(counts$fullname == coauthors$fullname[co])
+		    		points(counts$index[rownum], counts$count[rownum], 
+		    			pch=21, col='blue', bg='blue',cex = 1.3)
+		    		text(counts$index[rownum], counts$count[rownum]+0.5, 
+		    			coauthors$lastname[co], col='blue', cex = 0.8)
+		    	})
+		    }
+
+		    # if no focal author, plot all data
+		} else { points(counts$index, counts$count)	}
 
 		box()
 		axis(side = 1, at=NULL, labels=FALSE, lwd.ticks = 0)
@@ -210,17 +250,31 @@ server = function(input, output, session) {
 		mtext(side = 1, "Author (Alphabetical)", line = 0.5)
 		mtext(side = 2, "Number of Presentations", line = 1.5)
 
-		# label queried name
-		if ( any(values$all_authors$focal) ){
-			focal = get_focal_author()
-			rownum = which(counts$fullname == focal$fullname)
-			X_txt = counts$index[rownum]
-	    	Y_txt = counts$count[rownum]
-	    	points(X_txt, Y_txt, pch=21, col='red', bg='red',cex = 1.8)
-	    	text(X_txt, Y_txt+0.5, focal$fullname, col='red')
-		}
-
     } )  
+
+    # show buttons for focal author's coauthors
+    output$coauthor_buttons = renderUI({
+
+			# first, check for focal author
+			if (any(values$all_authors$focal)) {
+				coauthors = get_coauthors()	
+				M = get_name_matches()
+				# second, check for coauthors
+				if (dim(coauthors)[1] > 0) {
+				L = lapply(1:dim(coauthors)[1], function(co) {
+					entry = all_authors[coauthors$aid[co],]
+
+					if (entry$fullname %in% M & !is.null(M) & length(M) <= max_authors_listed) {
+						return(HTML(entry$fullname))
+					} else {
+						return(actionButton(entry$object_name, entry$fullname))
+					}
+		    	})
+				} else {return(HTML("No coauthors."))
+			}
+			}
+
+		})
    
 
 }

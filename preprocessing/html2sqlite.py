@@ -81,7 +81,7 @@ numauthors, numpresentations = len(unique_authors), len(author_list)
 # 	Table 1, presentation_titles: [pid, title]
 # 	Table 2, author_names: [aid, fullname, lastname]
 # 	Table 3, authorship: [pid, aid]
-# 	Table 4, coauthors: [aid1, aid2]
+# 	Table 4, coauthors: [aid_1, aid_2]
 
 import sqlite3
 dbfile = os.path.join(os.path.dirname(os.getcwd()),'data','cogsci.db')
