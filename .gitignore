@@ -4,7 +4,7 @@
 .RData
 *-Ex.R
 Rplots.pdf
-
+rsconnect/
 
 # Python
 __pycache__/
@@ -14,3 +14,4 @@ __pycache__/
 # Misc
 .DS_Store
 *.sublime-workspace
+README.html
