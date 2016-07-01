@@ -1,5 +1,6 @@
 library(shiny)
 library(DBI)
+library(miniUI)
 
 
 # make console a little prettier
@@ -30,18 +31,38 @@ dbDisconnect(con)
 # ------------------------------------------
 # SET UP USER INTERFACE
 ui = fluidPage(
-	titlePanel("Who's at CogSci? 2016"),
+
+	# page style
+	theme = "bootstrap.min.css",
+
+
+	headerPanel("Who's at CogSci? 2016"),
   
     mainPanel(
-    	textInput("name", 
-    		label = "Enter all or part of an author's name. First names are not included, except for the first inital (i.e. D Gentner).", 
-    		value = "gent"),
-		
-		# flexibly display author match output
-		uiOutput("name_matches"),
-		plotOutput("freq_plot", width = "100%"),
-		uiOutput("coauthor_buttons"),
-		dataTableOutput("focal_titles")
+
+
+    	div(
+    		textInput("name", width = "100%",
+	    		label = p("Enter all or part of an author's surname. First names are not searched, except for the first inital (i.e. D Gentner).", p("Potential matches will appear as buttons below the search field.")), 
+	    		value = "gent",
+	    		placeholder = "d gentner"),
+			uiOutput("name_matches"),
+			br()
+		),
+
+		plotOutput("freq_plot", width = "100%", height = "500px"),
+
+		div(
+			uiOutput("coauthor_buttons"),
+			dataTableOutput("focal_titles")
+		),
+
+		div(
+			titlePanel('About'),
+			p("I am a recent Cognitive & Brain Sciences graduate from Binghamton University", "[", a(href = "http://bingweb.binghamton.edu/~nconawa1/", "website"),"]. I made this app to learn how to use Shiny R. You can access the code on " , a(href = "https://github.com/noconaway/whos-at-cogsci", "GitHub"), "."),
+
+			p("My name is Nolan Conaway and ",actionLink("show_nolan", "I'll be at CogSci 2016"),"!")
+		)
 		
     )
 )
@@ -184,10 +205,18 @@ server = function(input, output, session) {
 	  	})
 		})
 
+	# special case to show my data :)
+	observeEvent(input$show_nolan, {
+			values$all_authors <- all_authors
+	    	idx = all_authors$fullname == "N Conaway"
+			values$all_authors$focal[idx] = TRUE
+		})
+
 
     # -------------------------------------------------
     # Show presentations by author
     output$focal_titles <- renderDataTable({
+
     	if (any(values$all_authors$focal)) { 
 
 			# get the titles
@@ -195,7 +224,6 @@ server = function(input, output, session) {
 
 			# convert to df
 			df = data.frame(Title = titles)
-			colnames(df) = paste(get_focal_author()$fullname,'Presentations')
 			return(df)
 
 		} else {
@@ -212,7 +240,9 @@ server = function(input, output, session) {
     	counts = presentation_counts()
 
 		# plot data
-	    par(family = "mono", new=TRUE) 
+		margin = 0.5
+	    par(family = "mono", new=TRUE, cex.axis = 1.2, cex = 1.5,
+	    	mai = c(0.5,0.75,0.25,0)) 
 		ph = plot(counts$index, counts$count, type='n',
 			axes = F, xlab = NA, ylab = NA)
 
@@ -245,15 +275,19 @@ server = function(input, output, session) {
 
 		box()
 		axis(side = 1, at=NULL, labels=FALSE, lwd.ticks = 0)
-		axis(side = 2, at=1:12, las = 1, col.ticks = 0,
-			mgp=c(0,0,0.4),tick = FALSE)
-		mtext(side = 1, "Author (Alphabetical)", line = 0.5)
-		mtext(side = 2, "Number of Presentations", line = 1.5)
+		axis(side = 2, at=1:13, las = 1, col.ticks = 0,
+			mgp=c(0,0,0.4), tick = FALSE)
+		mtext(side = 1, "Author (Alphabetical)", line = 0.5, cex = 1.5)
+		mtext(side = 2, "Number of Presentations", line = 1.5, cex = 1.5)
 
     } )  
 
-    # show buttons for focal author's coauthors
+    
+    # -------------------------------------------------
+	# show buttons for focal author's coauthors
     output$coauthor_buttons = renderUI({
+
+    		tpanel = titlePanel('Co-Authors & Presentations')
 
 			# first, check for focal author
 			if (any(values$all_authors$focal)) {
@@ -261,7 +295,7 @@ server = function(input, output, session) {
 				M = get_name_matches()
 				# second, check for coauthors
 				if (dim(coauthors)[1] > 0) {
-				L = lapply(1:dim(coauthors)[1], function(co) {
+				L= lapply(1:dim(coauthors)[1], function(co) {
 					entry = all_authors[coauthors$aid[co],]
 
 					if (entry$fullname %in% M & !is.null(M) & length(M) <= max_authors_listed) {
@@ -270,7 +304,10 @@ server = function(input, output, session) {
 						return(actionButton(entry$object_name, entry$fullname))
 					}
 		    	})
-				} else {return(HTML("No coauthors."))
+		    	
+		    	
+				return(c(tpanel,L))
+				} else {return(c(tpanel,HTML("No coauthors.")))
 			}
 			}
 
