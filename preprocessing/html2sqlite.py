@@ -56,7 +56,15 @@ for file in allfiles:
 
 		# use only first letter of first name, and last name
 		authors = [name.split(' ')[0][0] + ' ' + name.split(' ')[-1] for name in authors]
+
+		# deal with </span> elements in some author names
+		for i in range(len(authors)):
+			if "span>" in authors[i]:
+				pre_span = authors[i].split("</")[0]
+				post_span = authors[i].split("span>")[1]
+				authors[i] = pre_span + ' ' + post_span
 		author_list.append(authors)
+
 
 		#  ---------------------------------------
 		# process title: convert to ascii, ignoring incompaible characters

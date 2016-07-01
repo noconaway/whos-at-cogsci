@@ -40,7 +40,7 @@ ui = fluidPage(
   
     mainPanel(
 
-
+    	# text input and name matches
     	div(
     		textInput("name", width = "100%",
 	    		label = p("Enter all or part of an author's surname. First names are not searched, except for the first inital (i.e. D Gentner).", p("Potential matches will appear as buttons below the search field.")), 
@@ -50,17 +50,19 @@ ui = fluidPage(
 			br()
 		),
 
+    	# presentation frequency plot
 		plotOutput("freq_plot", width = "100%", height = "500px"),
 
+		# coauthors and presentation titles for focal author
 		div(
 			uiOutput("coauthor_buttons"),
 			dataTableOutput("focal_titles")
 		),
 
+		# Info
 		div(
 			titlePanel('About'),
 			p("I am a recent Cognitive & Brain Sciences graduate from Binghamton University", "[", a(href = "http://bingweb.binghamton.edu/~nconawa1/", "website"),"]. I made this app to learn how to use Shiny R. You can access the code on " , a(href = "https://github.com/noconaway/whos-at-cogsci", "GitHub"), "."),
-
 			p("My name is Nolan Conaway and ",actionLink("show_nolan", "I'll be at CogSci 2016"),"!")
 		)
 		
@@ -72,11 +74,13 @@ ui = fluidPage(
 server = function(input, output, session) {
 	values <- reactiveValues(all_authors = NULL)
 
+	# -------------------------------------------------
 	# return author buttons currently available
 	get_current_authors = reactive({
 		return(names(input)[which(names(input) %in% all_authors$object_name)])
 		})
 
+	# -------------------------------------------------
 	# return the currently focal author
 	get_focal_author = function() {
 		return(values$all_authors[values$all_authors$focal==TRUE,])
@@ -185,9 +189,7 @@ server = function(input, output, session) {
 					entry = all_authors[all_authors$fullname==M[num],]
 					actionButton(entry$object_name, entry$fullname)
 				})
-
-			# ask for more characters if there are too many matches
-			} else { HTML("Enter more characters!") }
+			} 
 			
 		})
     
@@ -201,15 +203,21 @@ server = function(input, output, session) {
 	    		values$all_authors <- all_authors
 	    		idx = all_authors$object_name == B
 				values$all_authors$focal[idx] = TRUE
+
+				# reset text input
+				updateTextInput(session,"name",value = "")
 	    	})
 	  	})
 		})
 
-	# special case to show my data :)
+	# special case to show N Conaway
 	observeEvent(input$show_nolan, {
 			values$all_authors <- all_authors
 	    	idx = all_authors$fullname == "N Conaway"
 			values$all_authors$focal[idx] = TRUE
+
+			# reset text input
+			updateTextInput(session,"name",value = "")
 		})
 
 
@@ -240,12 +248,13 @@ server = function(input, output, session) {
     	counts = presentation_counts()
 
 		# plot data
-		margin = 0.5
 	    par(family = "mono", new=TRUE, cex.axis = 1.2, cex = 1.5,
 	    	mai = c(0.5,0.75,0.25,0)) 
-		ph = plot(counts$index, counts$count, type='n',
-			axes = F, xlab = NA, ylab = NA)
 
+	    # make empty base plot to set axes
+	    X = c(0,dim(all_authors)[1])
+	    Y = c(1,max(counts$count)+0.75)
+		ph = plot(X,Y, type='n',axes = F, xlab = NA, ylab = NA)
 
 		# label queried name
 		if ( any(values$all_authors$focal) ){
@@ -273,6 +282,7 @@ server = function(input, output, session) {
 		    # if no focal author, plot all data
 		} else { points(counts$index, counts$count)	}
 
+		# set up axes
 		box()
 		axis(side = 1, at=NULL, labels=FALSE, lwd.ticks = 0)
 		axis(side = 2, at=1:13, las = 1, col.ticks = 0,
@@ -295,14 +305,12 @@ server = function(input, output, session) {
 				M = get_name_matches()
 				# second, check for coauthors
 				if (dim(coauthors)[1] > 0) {
+
+				# sort coauthors
+				coauthors = coauthors[order(coauthors$lastname),]
 				L= lapply(1:dim(coauthors)[1], function(co) {
 					entry = all_authors[coauthors$aid[co],]
-
-					if (entry$fullname %in% M & !is.null(M) & length(M) <= max_authors_listed) {
-						return(HTML(entry$fullname))
-					} else {
-						return(actionButton(entry$object_name, entry$fullname))
-					}
+					return(actionButton(entry$object_name, entry$fullname))
 		    	})
 		    	
 		    	
