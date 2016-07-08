@@ -18,14 +18,15 @@ con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
 	cmd = paste("SELECT * FROM author_names")
 	all_authors = dbGetQuery( con, cmd )
 
-	# Store an object name for each author. 
-	# If any of these object names are active, then they will become focal
-	all_authors$object_name = gsub(' ','_',all_authors$fullname)
-
 	# Store a vector indicating whether the author is focal
 	# These values are updated when the author object is active
 	all_authors$focal = FALSE
 dbDisconnect(con)
+
+# function return the currently focal author
+get_focal_author = function(V) {
+	return(V$all_authors[V$all_authors$focal==TRUE,])
+}
 
 
 # ------------------------------------------
@@ -43,9 +44,8 @@ ui = fluidPage(
     	# text input and name matches
     	div(
     		textInput("name", width = "100%",
-	    		label = p("Enter all or part of an author's surname. First names are not searched, except for the first inital (i.e. D Gentner).", p("Potential matches will appear as buttons below the search field.")), 
-	    		value = "gent",
-	    		placeholder = "d gentner"),
+	    		label = p("Enter all or part of an author's surname. First names are not searched, except for the first inital (e.g., D Gentner).", p("Potential matches will appear as buttons below the search field.")), 
+	    		value = "gent"),
 			uiOutput("name_matches"),
 			br()
 		),
@@ -75,63 +75,116 @@ server = function(input, output, session) {
 	values <- reactiveValues(all_authors = NULL)
 
 	# -------------------------------------------------
-	# return author buttons currently available
-	get_current_authors = reactive({
-		return(names(input)[which(names(input) %in% all_authors$object_name)])
+    # listen for button clicks
+	observe({ 
+
+		active_buttons = isolate(get_author_buttons())
+
+
+		# apply function to all buttons
+		lapply(1:nrow(active_buttons), function(N) {
+			B = active_buttons[N,]
+
+			# if button was clicked, make that the focal author
+	    	observeEvent(input[[B$object_name]], {
+	    		values$all_authors = all_authors
+	    		idx = all_authors$aid == B$aid
+				values$all_authors$focal = idx
+	    	})
+	  	})
+		})
+
+
+
+
+
+	# special case to show N Conaway
+	observeEvent(input$show_nolan, {
+			values$all_authors <- all_authors
+	    	idx = all_authors$fullname == "N Conaway"
+			values$all_authors$focal = idx
 		})
 
 	# -------------------------------------------------
-	# return the currently focal author
-	get_focal_author = function() {
-		return(values$all_authors[values$all_authors$focal==TRUE,])
-	}
 
 	# -------------------------------------------------
 	# function to query the DB for name matches
 	get_name_matches =  reactive ({ 
 
-		# connect to db
-		con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
-
-		# construct command and query the db
-		cmd = paste("SELECT fullname FROM author_names WHERE fullname LIKE '%", input$name, "%';", sep = '')
-	    result = dbGetQuery( con, cmd )
-	    dbDisconnect(con)
-
-	    # return null if there are no matches
-	    if (length(result$fullname) == 0) {return(NULL)}
-
-	    # otherwise, return the names
-	    return(result$fullname)
-	})
-
-
-	# -------------------------------------------------
-	# function to return relevant presentation titles
-	author_presentation_titles = reactive({
-
 			# connect to db
 			con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
 
-			# get author id (aid)
-			aid = get_focal_author()$aid
+			# construct command and query the db
+			cmd = paste("SELECT * FROM author_names WHERE fullname LIKE '%", input$name, "%';", sep = '')
+		    result = dbGetQuery( con, cmd )
+		    dbDisconnect(con)
 
-			# get paper ids (pids)
-			cmd = paste("SELECT pid FROM authorship WHERE aid = ", aid,';', sep='')
-			pid = dbGetQuery(con, cmd)$pid
-		
-			# get paper titles
-			cmd = paste("SELECT title FROM presentation_titles WHERE pid IN (", 
-						paste(pid, collapse = ','), ")")
-			titles = dbGetQuery(con, cmd)$title
+		    # return null if there are no matches
+		    if (length(result$fullname) == 0) {return(NULL)}
+
+		    # otherwise, return the names
+		    return(result)
+		})
+
+	# -------------------------------------------------
+	# function to return coauthor information based on a focal author
+	get_coauthors = reactive({
+			# connect to db
+			con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
+			
+			# get counts from the db
+			aid = get_focal_author(values)$aid
+	    	cmd = paste("SELECT aid_2 FROM coauthors WHERE aid_1 = ", aid,';', sep='')
+			co_aids = dbGetQuery(con, cmd)
+			colnames(co_aids) = "aid"
 			dbDisconnect(con)
-			return(titles)
-	})
+			
+			# merge data frames
+			co_aids = merge(all_authors, co_aids, by="aid")
+			return(co_aids)
+		})
 
+	# -------------------------------------------------
+	# return author buttons
+	get_author_buttons = reactive({
+
+		# data for authors in search field
+		matches_exist = !is.null(get_name_matches()$aid)
+		if (matches_exist) {
+			search_items = all_authors[all_authors$aid %in% get_name_matches()$aid,]
+			search_items$location = 'search'
+			search_items$object_name = paste(search_items$object_name,'_Search',sep='')
+		}
+
+		# data for focal author's coauthors
+		focal_exists = !is.null(get_focal_author(values))
+		if (focal_exists) {
+			focal_coauth = get_coauthors()
+			coauthors_exist = nrow(focal_coauth) > 0
+			if (coauthors_exist) {
+				focal_coauth$location = 'coauth'
+				focal_coauth$object_name = paste(focal_coauth$object_name,'_Coauth',sep='')
+			}
+		} else {
+			coauthors_exist = FALSE
+		}
+
+		# return the appropriate df
+		if	(matches_exist & coauthors_exist) {
+			return(rbind(search_items,focal_coauth))
+		} else if (matches_exist & !coauthors_exist) {
+			return(search_items)
+		} else if (!matches_exist & coauthors_exist) {
+			return(focal_coauth)
+		} else {
+			return(NULL)
+		}
+	})
 
 	# -------------------------------------------------
 	# function to construct an author-by-presentation count data frame
 	presentation_counts = reactive({
+			
 			# connect to db
 			con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
 			
@@ -151,99 +204,62 @@ server = function(input, output, session) {
 			return(counts)
 		})
 
-		# -------------------------------------------------
-		# function to return coauthor informartion based on a focal author
-		get_coauthors = reactive({
-				# connect to db
-				con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
-				
-				# get counts from the db
-				aid = get_focal_author()$aid
-		    	cmd = paste("SELECT aid_2 FROM coauthors WHERE aid_1 = ", aid,';', sep='')
-				co_aids = dbGetQuery(con, cmd)
-				colnames(co_aids) = "aid"
-				dbDisconnect(con)
-				
-				# merge data frames
-				co_aids = merge(all_authors, co_aids, by="aid")
-				return(co_aids)
-			})
+	# -------------------------------------------------
+	# function to return relevant presentation titles
+	author_presentation_titles = reactive({
 
+			# connect to db
+			con = dbConnect(RSQLite::SQLite(), dbname=dbfilepath)
 
+			# get author id (aid)
+			aid = get_focal_author(values)$aid
+
+			# get paper ids (pids)
+			cmd = paste("SELECT pid FROM authorship WHERE aid = ", aid,';', sep='')
+			pid = dbGetQuery(con, cmd)$pid
+		
+			# get paper titles
+			cmd = paste("SELECT title FROM presentation_titles WHERE pid IN (", 
+						paste(pid, collapse = ','), ")")
+			titles = dbGetQuery(con, cmd)$title
+			dbDisconnect(con)
+			return(titles)
+	})
 
 
 
 	# -------------------------------------------------
   	# print name matches
 	output$name_matches = renderUI({
+			B = get_author_buttons()
 
-			# get matches
-			M = get_name_matches()
+			# return if there are no names
+			if (is.null(B)) {
+				return(HTML("No matches."))
+			}
 
-			# Return message if there are no matches
-			if (is.null(M)) { HTML("No matches.") } 
+			# return if there are no matches, even if there are coauthors
+			B = subset(B, location=='search')
+			if (nrow(B) == 0) {	
+				return(HTML("No matches."))
+			}
 
-			# if there are matches AND there aren't too many, return the matches
-			else if (!is.null(M) & length(M) <= max_authors_listed) { 
-				lapply(1:length(M), function(num) {
-					entry = all_authors[all_authors$fullname==M[num],]
-					actionButton(entry$object_name, entry$fullname)
+			# return message if there are too many matches
+			if (nrow(B) > max_authors_listed) {
+				return(HTML("Too many matches! Enter more characters."))
+			}
+
+			# otherwise, make the buttons!
+			match_buttons = lapply(1:nrow(B), function(num) {
+					actionButton(B[num,]$object_name, B[num,]$fullname)
 				})
-			} 
-			
-		})
-    
-    # listen for button clicks
-	observe({
-		# apply function to all buttons
-		lapply(get_current_authors(), function(B) {
+			return(match_buttons)
+		})	
 
-			# if button was clicked, make that the focal author
-	    	observeEvent(input[[B]], {
-	    		values$all_authors <- all_authors
-	    		idx = all_authors$object_name == B
-				values$all_authors$focal[idx] = TRUE
-
-				# reset text input
-				updateTextInput(session,"name",value = "")
-	    	})
-	  	})
-		})
-
-	# special case to show N Conaway
-	observeEvent(input$show_nolan, {
-			values$all_authors <- all_authors
-	    	idx = all_authors$fullname == "N Conaway"
-			values$all_authors$focal[idx] = TRUE
-
-			# reset text input
-			updateTextInput(session,"name",value = "")
-		})
-
-
-    # -------------------------------------------------
-    # Show presentations by author
-    output$focal_titles <- renderDataTable({
-
-    	if (any(values$all_authors$focal)) { 
-
-			# get the titles
-			titles = author_presentation_titles()
-
-			# convert to df
-			df = data.frame(Title = titles)
-			return(df)
-
-		} else {
-			HTML("No author has been selected.")
-		}
-    }, options = list(dom = 't')
-    )
-    
 	# ------------------------------------------------- 
     # presentation frequency chart
     output$freq_plot <- renderPlot({
-		
+
 		# get data from reactive
     	counts = presentation_counts()
 
@@ -260,7 +276,7 @@ server = function(input, output, session) {
 		if ( any(values$all_authors$focal) ){
 
 			# label focal author
-			focal = get_focal_author()
+			focal = get_focal_author(values)
 			rownum = which(counts$fullname == focal$fullname)
 	    	points(counts$index[rownum], counts$count[rownum], 
 	    		pch=21, col='red', bg='red',cex = 1.8)
@@ -292,35 +308,55 @@ server = function(input, output, session) {
 
     } )  
 
-    
     # -------------------------------------------------
 	# show buttons for focal author's coauthors
     output$coauthor_buttons = renderUI({
+    	
+	    	# return nothing if there is no focal author
+	    	if (is.null(get_focal_author(values))) {
+	    		return(NULL)
+	    	}
 
-    		tpanel = titlePanel('Co-Authors & Presentations')
+	    	# return message there are no active buttons
+	    	tpanel = titlePanel('Co-Authors & Presentations')
+	    	B = get_author_buttons()
+	    	if (is.null(B)) {
+	    		return(c(tpanel,HTML("No coauthors.")))
+	    	}
 
-			# first, check for focal author
-			if (any(values$all_authors$focal)) {
-				coauthors = get_coauthors()	
-				M = get_name_matches()
-				# second, check for coauthors
-				if (dim(coauthors)[1] > 0) {
+	    	# return message there are no coauthors
+	    	B = subset(B, location=='coauth')
+	    	if (nrow(B)==0) {
+	    		return(c(tpanel,HTML("No coauthors.")))
+	    	}
 
-				# sort coauthors
-				coauthors = coauthors[order(coauthors$lastname),]
-				L= lapply(1:dim(coauthors)[1], function(co) {
-					entry = all_authors[coauthors$aid[co],]
-					return(actionButton(entry$object_name, entry$fullname))
-		    	})
-		    	
-		    	
-				return(c(tpanel,L))
-				} else {return(c(tpanel,HTML("No coauthors.")))
-			}
-			}
-
+	    	# otherwise, make the buttons!
+			coauth_buttons = lapply(1:nrow(B), function(num) {
+					actionButton(B[num,]$object_name, B[num,]$fullname)
+				})
+			return(c(tpanel,coauth_buttons))
 		})
-   
+
+
+    # -------------------------------------------------
+    # Show presentations by author
+    output$focal_titles <- renderDataTable({
+
+    	if (any(values$all_authors$focal)) { 
+
+			# get the titles
+			titles = author_presentation_titles()
+
+			# convert to df
+			df = data.frame(Title = titles)
+			return(df)
+
+		} else {
+			HTML("No author has been selected.")
+		}
+    }, options = list(dom = 't')
+    )
+    
 
 }
 

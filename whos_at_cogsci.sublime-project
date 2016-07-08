@@ -1,7 +1,7 @@
 {
 
  // good to launch via terminal
- // rscript -e "library(shiny);runApp(getwd())"
+ // rscript -e "library(shiny);runApp(getwd(),port=6543)"
 
 	"folders":
 	[

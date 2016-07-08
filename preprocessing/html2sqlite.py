@@ -87,7 +87,7 @@ numauthors, numpresentations = len(unique_authors), len(author_list)
 #  ---------------------------------------
 # DESIGN SQLITE ---
 # 	Table 1, presentation_titles: [pid, title]
-# 	Table 2, author_names: [aid, fullname, lastname]
+# 	Table 2, author_names: [aid, fullname, lastname, object_name]
 # 	Table 3, authorship: [pid, aid]
 # 	Table 4, coauthors: [aid_1, aid_2]
 
@@ -110,9 +110,13 @@ c.executemany('INSERT INTO presentation_titles VALUES (?,?)', rows)
 print("Wrote " + str(len(rows)) + " rows to presentation_titles...")
 
 # -------- set up author_names:
-c.execute('CREATE TABLE author_names (aid INTEGER, fullname TEXT, lastname TEXT)')
-rows = [(i+1, unique_authors[i], unique_authors[i][2:]) for i in range(numauthors)]
-c.executemany('INSERT INTO author_names VALUES (?,?,?)', rows)
+c.execute('CREATE TABLE author_names (aid INTEGER, fullname TEXT, lastname TEXT, object_name TEXT)')
+rows = [(	i+1, # aid
+			unique_authors[i], # full name
+			unique_authors[i][2:],  # last name only
+			"_".join(unique_authors[i].split(' '))) # object name (no spaces)
+			for i in range(numauthors)]
+c.executemany('INSERT INTO author_names VALUES (?,?,?,?)', rows)
 print("Wrote " + str(len(rows)) + " rows to author_names...")
 
 
