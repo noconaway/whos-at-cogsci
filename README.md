@@ -9,10 +9,10 @@ As is, the app provides an interface for users to search authors and read presen
 ###Possible additions
 
 1. **Co-authorship network**. I put a little time into this, but the edges are really sparse and I'm not a network whiz.
-2. **Author similarity plot.** MDS / Cluster the presentation title data. Is there a better distance metric than Jaccard? Are there any special procedure for dealing with sparse data? This will likely require that author word-use data is stored, rather than computed on the fly.
+2. **Author similarity plot.** MDS / Cluster the presentation title data. This will likely require that author word-use data is stored, rather than computed on the fly.
 3. **Recommender**. Suggest N nearest talks to a given author.
 6. **Distance to D Gentner**. Self explanatory.
-7. Some general information at the top. How many authors are there? How many presentations? Average number of coauthors?
+7. Add some more general information at the top. How many authors are there? How many presentations? Average number of coauthors?
 8. Add more info to the presentation title table (times, coauthors, etc). Will need to edit preprocessing scripts for this.
 
 ###Things to fix
