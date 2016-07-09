@@ -1,7 +1,7 @@
 #Who's at Cogsci? 2016
 
-The [online schedule](http://cognitivesciencesociety.org/conference2016/schedule.html
-) for CogSci 2016 is really clunky. I wanted a nice interface to see who's presenting, and so I took this opportunity to learn how to use Shiny R. 
+The [online schedule](http://cognitivesciencesociety.org/conference2016/schedule.html) for CogSci 2016 is really clunky. I wanted a nice interface to see who's presenting, and so I took this opportunity to learn how to use Shiny R. I'm hosting the app on `shiny.io`, you can find it [here](https://nolan.shinyapps.io/whos-at-cogsci/).
+
 
 As is, the app provides an interface for users to search authors and read presentation titles / co-authorship information. But there are a bunch of other things I'd like to do, and I encourage outside contributions! Below i have jotted some ideas.
 
