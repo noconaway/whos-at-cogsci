@@ -19,11 +19,9 @@ As is, the app provides an interface for users to search authors and read presen
 
 1. Find some way to systematically confirm that no presentations were missed in preprocessing.
 2. Reset Button. Allow users to remove the focal author without replacement.
-3. Make sure names are not terribly overlapping in the presentation frequency plot, except in extreme cases (e.g., J Tenenbaum). G Honke suggests looking into Jitter.
-4. Sometimes author-button clicking does not work? Usually returns some other author, usually one that is in the coauthor section... I think something strange is going on with the dependencies, maybe `Isolate()` would fix it?
-5. More vertical padding between buttons.
-6. Alignment of text for A* and Z* authors should be dynamic. Maybe this is also a jitter issue.
-7. Remove TBD's from presentation title table.
+3. More vertical padding between buttons.
+4. Make sure author names do not run off screen (e.g., last names starting with A or Z)
+5. Remove TBD's from presentation title table.
 
 
 ###Notes
