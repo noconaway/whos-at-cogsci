@@ -1,11 +1,15 @@
 library(shiny)
 library(DBI)
 library(miniUI)
+library(shinythemes)
+
 
 
 # make console a little prettier
 cat(rep("\n",2))
 print(format(Sys.time(), "%r"))
+
+
 
 # store relative path to db
 dbfilepath = file.path("data", "cogsci.db")
@@ -29,13 +33,13 @@ get_focal_author = function(V) {
 }
 
 
+
 # ------------------------------------------
 # SET UP USER INTERFACE
 ui = fluidPage(
 
 	# page style
-	theme = "bootstrap.min.css",
-
+	theme = shinytheme("flatly"),
 
 	headerPanel("Who's at CogSci? 2016"),
   
@@ -69,6 +73,7 @@ ui = fluidPage(
     )
 )
 
+
 # ------------------------------------------
 # SET UP SERVER
 server = function(input, output, session) {
@@ -76,26 +81,27 @@ server = function(input, output, session) {
 
 	# -------------------------------------------------
     # listen for button clicks
-	observe({ 
+	observe({
 
-		active_buttons = isolate(get_author_buttons())
+			# take dependency on all input
+			lapply(names(input), function(I) {
+			    	observeEvent(input[[I]], {})
+			  	})
 
+			active_buttons = isolate(get_author_buttons())
 
-		# apply function to all buttons
-		lapply(1:nrow(active_buttons), function(N) {
-			B = active_buttons[N,]
+			# apply function to all buttons
+			lapply(1:nrow(active_buttons), function(N) {
+					B = active_buttons[N,]
 
-			# if button was clicked, make that the focal author
-	    	observeEvent(input[[B$object_name]], {
-	    		values$all_authors = all_authors
-	    		idx = all_authors$aid == B$aid
-				values$all_authors$focal = idx
-	    	})
-	  	})
+					# if button was clicked, make that the focal author
+			    	observeEvent(input[[B$object_name]], {
+				    		values$all_authors = all_authors
+				    		idx = all_authors$aid == B$aid
+							values$all_authors$focal = idx
+				    	})
+			  	})
 		})
-
-
-
 
 
 	# special case to show N Conaway
@@ -233,12 +239,12 @@ server = function(input, output, session) {
 	output$name_matches = renderUI({
 			B = get_author_buttons()
 
-			# return if there are no names
-			if (is.null(B)) {
+			# return if there are no names or nothing was searched
+			if (is.null(B) | nchar(input$name) == 0) {
 				return(HTML("No matches."))
 			}
 
-			# return if there are no matches, even if there are coauthors
+			# return if there are no matches
 			B = subset(B, location=='search')
 			if (nrow(B) == 0) {	
 				return(HTML("No matches."))
@@ -264,8 +270,10 @@ server = function(input, output, session) {
     	counts = presentation_counts()
 
 		# plot data
-	    par(family = "mono", new=TRUE, cex.axis = 1.2, cex = 1.5,
-	    	mai = c(0.5,0.75,0.25,0)) 
+	    par(family = "mono", new=TRUE, cex.axis = 1.1, cex = 1.5,
+	    	mai = c(0.5,0.75,0.25,0) , 
+	    	col = rgb(44, 62, 80, maxColorValue=255),
+	    	col.axis = rgb(44, 62, 80, maxColorValue=255)) 
 
 	    # make empty base plot to set axes
 	    X = c(0,dim(all_authors)[1])
@@ -275,28 +283,44 @@ server = function(input, output, session) {
 		# label queried name
 		if ( any(values$all_authors$focal) ){
 
-			# label focal author
-			focal = get_focal_author(values)
-			rownum = which(counts$fullname == focal$fullname)
-	    	points(counts$index[rownum], counts$count[rownum], 
-	    		pch=21, col='red', bg='red',cex = 1.8)
-	    	text(counts$index[rownum], counts$count[rownum]+0.5, 
-	    		focal$fullname, col='red')
+			# plot base data
+			points(counts$index, counts$count,pch=21,
+				col=rgb(149, 165, 166, alpha = 30, maxColorValue=255),
+	    		bg =rgb(149, 165, 166, alpha = 20, maxColorValue=255))
 
 	    	# label coauthors
 	    	coauthors = get_coauthors()	
 	    	if (dim(coauthors)[1] > 0) {
-		    	lapply(1:dim(coauthors)[1], function(co) {
-		    		rownum = which(counts$fullname == coauthors$fullname[co])
-		    		points(counts$index[rownum], counts$count[rownum], 
-		    			pch=21, col='blue', bg='blue',cex = 1.3)
-		    		text(counts$index[rownum], counts$count[rownum]+0.5, 
-		    			coauthors$lastname[co], col='blue', cex = 0.8)
-		    	})
+
+	    		data = merge(counts,coauthors,by="aid")
+	    		x = data$index
+	    		y = data$count
+	    		points(x, y, pch=21, cex = 1.3,
+    				col=rgb(44, 62, 80, alpha = 132, maxColorValue=255),
+	    			bg =rgb(44, 62, 80, alpha = 132, maxColorValue=255))
+	    		t = data$lastname.x
+	    		y_for_t = jitter(y+0.5,0.5)
+	    		y_for_t[y_for_t < 1] = y[y_for_t < 1]
+	    		text(x, y_for_t, t, cex = 0.8,
+	    			col = rgb(44, 62, 80, alpha = 220, maxColorValue=255))
 		    }
 
-		    # if no focal author, plot all data
-		} else { points(counts$index, counts$count)	}
+		    # label focal author
+			focal = get_focal_author(values)
+			rownum = which(counts$fullname == focal$fullname)
+	    	points(counts$index[rownum], counts$count[rownum], 
+	    		pch=21,cex = 1.8,
+	    		col = rgb(192, 57, 43, maxColorValue=255),
+	    		bg = rgb(192, 57, 43, maxColorValue=255))
+	    	text(counts$index[rownum], counts$count[rownum]+0.5, 
+	    		focal$lastname, col = rgb(192, 57, 43, maxColorValue=255))
+
+		 # if no focal author, plot all data
+		} else { 
+			points(counts$index, counts$count,pch=21,
+				col=rgb(44, 62, 80, alpha = 102, maxColorValue=255),
+	    		bg =rgb(44, 62, 80, alpha = 102, maxColorValue=255))
+	    	}
 
 		# set up axes
 		box()
@@ -311,14 +335,15 @@ server = function(input, output, session) {
     # -------------------------------------------------
 	# show buttons for focal author's coauthors
     output$coauthor_buttons = renderUI({
-    	
+    		tpanel = titlePanel('Co-Authors & Presentations')
+
 	    	# return nothing if there is no focal author
 	    	if (is.null(get_focal_author(values))) {
-	    		return(NULL)
+	    		return(c(tpanel,HTML("No author selected.")))
 	    	}
 
 	    	# return message there are no active buttons
-	    	tpanel = titlePanel('Co-Authors & Presentations')
+	    	
 	    	B = get_author_buttons()
 	    	if (is.null(B)) {
 	    		return(c(tpanel,HTML("No coauthors.")))
@@ -331,6 +356,7 @@ server = function(input, output, session) {
 	    	}
 
 	    	# otherwise, make the buttons!
+	    	B =  B[with(B, order(lastname)), ]
 			coauth_buttons = lapply(1:nrow(B), function(num) {
 					actionButton(B[num,]$object_name, B[num,]$fullname)
 				})
@@ -356,7 +382,6 @@ server = function(input, output, session) {
 		}
     }, options = list(dom = 't')
     )
-    
 
 }
 
