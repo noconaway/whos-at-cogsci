@@ -78,8 +78,13 @@ server = function(input, output, session) {
     # listen for button clicks
 	observe({ 
 
-		active_buttons = isolate(get_author_buttons())
+		# take dependency on all input
+		lapply(names(input), function(I) {
+	    	observeEvent(input[[I]], {})
+	  	})
 
+
+		active_buttons = isolate(get_author_buttons())
 
 		# apply function to all buttons
 		lapply(1:nrow(active_buttons), function(N) {
@@ -93,9 +98,6 @@ server = function(input, output, session) {
 	    	})
 	  	})
 		})
-
-
-
 
 
 	# special case to show N Conaway
@@ -311,14 +313,15 @@ server = function(input, output, session) {
     # -------------------------------------------------
 	# show buttons for focal author's coauthors
     output$coauthor_buttons = renderUI({
-    	
+    		tpanel = titlePanel('Co-Authors & Presentations')
+
 	    	# return nothing if there is no focal author
 	    	if (is.null(get_focal_author(values))) {
-	    		return(NULL)
+	    		return(c(tpanel,HTML("No author selected.")))
 	    	}
 
 	    	# return message there are no active buttons
-	    	tpanel = titlePanel('Co-Authors & Presentations')
+	    	
 	    	B = get_author_buttons()
 	    	if (is.null(B)) {
 	    		return(c(tpanel,HTML("No coauthors.")))
