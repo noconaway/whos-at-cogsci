@@ -81,26 +81,26 @@ server = function(input, output, session) {
 
 	# -------------------------------------------------
     # listen for button clicks
-	observe({ 
+	observe({
 
-		# take dependency on all input
-		lapply(names(input), function(I) {
-	    	observeEvent(input[[I]], {})
-	  	})
+			# take dependency on all input
+			lapply(names(input), function(I) {
+			    	observeEvent(input[[I]], {})
+			  	})
 
-		active_buttons = isolate(get_author_buttons())
+			active_buttons = isolate(get_author_buttons())
 
-		# apply function to all buttons
-		lapply(1:nrow(active_buttons), function(N) {
-			B = active_buttons[N,]
+			# apply function to all buttons
+			lapply(1:nrow(active_buttons), function(N) {
+					B = active_buttons[N,]
 
-			# if button was clicked, make that the focal author
-	    	observeEvent(input[[B$object_name]], {
-	    		values$all_authors = all_authors
-	    		idx = all_authors$aid == B$aid
-				values$all_authors$focal = idx
-	    	})
-	  	})
+					# if button was clicked, make that the focal author
+			    	observeEvent(input[[B$object_name]], {
+				    		values$all_authors = all_authors
+				    		idx = all_authors$aid == B$aid
+							values$all_authors$focal = idx
+				    	})
+			  	})
 		})
 
 
@@ -283,15 +283,10 @@ server = function(input, output, session) {
 		# label queried name
 		if ( any(values$all_authors$focal) ){
 
-			# label focal author
-			focal = get_focal_author(values)
-			rownum = which(counts$fullname == focal$fullname)
-	    	points(counts$index[rownum], counts$count[rownum], 
-	    		pch=21,cex = 1.8,
-	    		col = rgb(192, 57, 43, maxColorValue=255),
-	    		bg = rgb(192, 57, 43, maxColorValue=255))
-	    	text(counts$index[rownum], counts$count[rownum]+0.5, 
-	    		focal$lastname, col = rgb(192, 57, 43, maxColorValue=255))
+			# plot base data
+			points(counts$index, counts$count,pch=21,
+				col=rgb(149, 165, 166, alpha = 30, maxColorValue=255),
+	    		bg =rgb(149, 165, 166, alpha = 20, maxColorValue=255))
 
 	    	# label coauthors
 	    	coauthors = get_coauthors()	
@@ -301,14 +296,24 @@ server = function(input, output, session) {
 	    		x = data$index
 	    		y = data$count
 	    		points(x, y, pch=21, cex = 1.3,
-    				col=rgb(44, 62, 80, alpha = 102, maxColorValue=255),
-	    			bg =rgb(44, 62, 80, alpha = 26, maxColorValue=255))
+    				col=rgb(44, 62, 80, alpha = 132, maxColorValue=255),
+	    			bg =rgb(44, 62, 80, alpha = 132, maxColorValue=255))
 	    		t = data$lastname.x
 	    		y_for_t = jitter(y+0.5,0.5)
 	    		y_for_t[y_for_t < 1] = y[y_for_t < 1]
 	    		text(x, y_for_t, t, cex = 0.8,
-	    			col = rgb(44, 62, 80, alpha = 200, maxColorValue=255))
+	    			col = rgb(44, 62, 80, alpha = 220, maxColorValue=255))
 		    }
+
+		    # label focal author
+			focal = get_focal_author(values)
+			rownum = which(counts$fullname == focal$fullname)
+	    	points(counts$index[rownum], counts$count[rownum], 
+	    		pch=21,cex = 1.8,
+	    		col = rgb(192, 57, 43, maxColorValue=255),
+	    		bg = rgb(192, 57, 43, maxColorValue=255))
+	    	text(counts$index[rownum], counts$count[rownum]+0.5, 
+	    		focal$lastname, col = rgb(192, 57, 43, maxColorValue=255))
 
 		 # if no focal author, plot all data
 		} else { 

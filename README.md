@@ -18,10 +18,9 @@ As is, the app provides an interface for users to search authors and read presen
 ###Things to fix
 
 1. Find some way to systematically confirm that no presentations were missed in preprocessing.
-2. Reset Button. Allow users to remove the focal author without replacement.
-3. More vertical padding between buttons.
-4. Make sure author names do not run off screen (e.g., last names starting with A or Z)
-5. Remove TBD's from presentation title table.
+2. More vertical padding between buttons.
+3. Make sure author names do not run off screen (e.g., last names starting with A or Z)
+4. Remove TBD's from presentation title table.
 
 
 ###Notes
