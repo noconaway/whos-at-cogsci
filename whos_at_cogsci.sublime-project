@@ -3,6 +3,10 @@
  // good to launch via terminal
  // rscript -e "library(shiny);runApp(getwd(),port=6543)"
 
+ // upload to shiny io...
+ // require(rsconnect)
+ // deployApp()
+
 	"folders":
 	[
 		{

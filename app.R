@@ -55,7 +55,12 @@ ui = fluidPage(
 		),
 
     	# presentation frequency plot
-		plotOutput("freq_plot", width = "100%", height = "500px"),
+		div(
+			span(textOutput("hover_info"),align = "right"),
+			plotOutput("freq_plot", 
+				click = "plot_click", hover = "plot_hover",
+				width = "100%", height = "500px")
+			),
 
 		# coauthors and presentation titles for focal author
 		div(
@@ -103,6 +108,30 @@ server = function(input, output, session) {
 			  	})
 		})
 
+	# listen for plot clicks
+	observe({
+			# return if NULL
+			if(is.null(input$plot_click)) return()
+
+			# get counts df
+			counts = isolate(presentation_counts())
+
+			# get near points 
+			np = nearPoints(counts, input$plot_click, 
+				xvar = "index", yvar = "count",
+				threshold = 20, #px
+				maxpoints = 1)
+
+			# do nothing if there is nobody
+			if (nrow(np) == 0) return()
+
+			# else, change focal author
+			isolate({
+				values$all_authors <- all_authors
+		    	idx = all_authors$aid == np$aid
+				values$all_authors$focal = idx
+			})
+		})
 
 	# special case to show N Conaway
 	observeEvent(input$show_nolan, {
@@ -240,15 +269,11 @@ server = function(input, output, session) {
 			B = get_author_buttons()
 
 			# return if there are no names or nothing was searched
-			if (is.null(B) | nchar(input$name) == 0) {
-				return(HTML("No matches."))
-			}
+			if (is.null(B) | nchar(input$name) == 0) return(HTML("No matches."))
 
 			# return if there are no matches
 			B = subset(B, location=='search')
-			if (nrow(B) == 0) {	
-				return(HTML("No matches."))
-			}
+			if (nrow(B) == 0) return(HTML("No matches."))
 
 			# return message if there are too many matches
 			if (nrow(B) > max_authors_listed) {
@@ -284,9 +309,9 @@ server = function(input, output, session) {
 		if ( any(values$all_authors$focal) ){
 
 			# plot base data
-			points(counts$index, counts$count,pch=21,
-				col=rgb(149, 165, 166, alpha = 30, maxColorValue=255),
-	    		bg =rgb(149, 165, 166, alpha = 20, maxColorValue=255))
+			points(counts$index, counts$count, pch=21, cex = 0.75,
+				col=rgb(127, 140, 141, alpha = 0, maxColorValue=255),
+	    		bg =rgb(127, 140, 141, alpha = 220, maxColorValue=255))
 
 	    	# label coauthors
 	    	coauthors = get_coauthors()	
@@ -296,8 +321,8 @@ server = function(input, output, session) {
 	    		x = data$index
 	    		y = data$count
 	    		points(x, y, pch=21, cex = 1.3,
-    				col=rgb(44, 62, 80, alpha = 132, maxColorValue=255),
-	    			bg =rgb(44, 62, 80, alpha = 132, maxColorValue=255))
+    				col=rgb(44, 62, 80, alpha = 255, maxColorValue=255),
+	    			bg =rgb(44, 62, 80, alpha = 50, maxColorValue=255))
 	    		t = data$lastname.x
 	    		y_for_t = jitter(y+0.5,0.5)
 	    		y_for_t[y_for_t < 1] = y[y_for_t < 1]
@@ -313,7 +338,7 @@ server = function(input, output, session) {
 	    		col = rgb(192, 57, 43, maxColorValue=255),
 	    		bg = rgb(192, 57, 43, maxColorValue=255))
 	    	text(counts$index[rownum], counts$count[rownum]+0.5, 
-	    		focal$lastname, col = rgb(192, 57, 43, maxColorValue=255))
+	    		focal$fullname, col = rgb(192, 57, 43, maxColorValue=255))
 
 		 # if no focal author, plot all data
 		} else { 
@@ -333,6 +358,32 @@ server = function(input, output, session) {
     } )  
 
     # -------------------------------------------------
+	# show hover-over info
+	output$hover_info = renderText({
+			querystr = "* You can click on the plot to select authors!"
+
+			# return if NULL
+			if(is.null(input$plot_hover)) return(querystr)
+
+			# get counts df
+			counts = isolate(presentation_counts())
+
+			# get near points 
+			np = nearPoints(counts, input$plot_hover, 
+				xvar = "index", yvar = "count",
+				threshold = 20, #px
+				maxpoints = 1)
+
+			# do nothing if there is nobody
+			if (nrow(np) == 0) return(querystr)
+
+			# else, display info
+			querystr = paste("* Selected author:",np$fullname)
+			return(querystr)
+
+		})
+
+    # -------------------------------------------------
 	# show buttons for focal author's coauthors
     output$coauthor_buttons = renderUI({
     		tpanel = titlePanel('Co-Authors & Presentations')
@@ -343,17 +394,12 @@ server = function(input, output, session) {
 	    	}
 
 	    	# return message there are no active buttons
-	    	
 	    	B = get_author_buttons()
-	    	if (is.null(B)) {
-	    		return(c(tpanel,HTML("No coauthors.")))
-	    	}
+	    	if (is.null(B)) return(c(tpanel,HTML("No coauthors.")))
 
 	    	# return message there are no coauthors
 	    	B = subset(B, location=='coauth')
-	    	if (nrow(B)==0) {
-	    		return(c(tpanel,HTML("No coauthors.")))
-	    	}
+	    	if (nrow(B)==0) return(c(tpanel,HTML("No coauthors.")))
 
 	    	# otherwise, make the buttons!
 	    	B =  B[with(B, order(lastname)), ]
