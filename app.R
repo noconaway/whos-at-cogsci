@@ -71,7 +71,7 @@ ui = fluidPage(
 		# Info
 		div(
 			titlePanel('About'),
-			p("I am a recent Cognitive & Brain Sciences graduate from Binghamton University", "[", a(href = "http://bingweb.binghamton.edu/~nconawa1/", "website"),"]. I made this app to learn how to use Shiny R. You can access the code on " , a(href = "https://github.com/noconaway/whos-at-cogsci", "GitHub"), "."),
+			p("I am a recent Cognitive & Brain Sciences graduate from Binghamton University", "[", a(href = "https://nolanbconaway.github.io/", "website"),"]. I made this app to learn how to use Shiny R. You can access the code on " , a(href = "https://github.com/nolanbconaway/whos-at-cogsci", "GitHub"), "."),
 			p("My name is Nolan Conaway and ",actionLink("show_nolan", "I'll be at CogSci 2016"),"!")
 		)
 		
